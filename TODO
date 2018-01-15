@@ -1,0 +1,6 @@
+* add front-end framework which presents table of previous and next 2 weeks
+* implement data code
+* implement handlers
+* set up infrastructure with containers
+* deploy to k8s
+* ci
