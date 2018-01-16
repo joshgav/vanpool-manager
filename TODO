@@ -1,6 +1,14 @@
-* add front-end framework which presents table of previous and next 2 weeks
-* implement data code
-* implement handlers
-* set up infrastructure with containers
-* deploy to k8s
+* finish frontend implementation (./assets)
+  * wire TripSelector to Trip (data -> props)
+  * add webpack config to frontend (./assets)
+* finish backend implementation
+  * auth handlers
+  * session state with Redis
+  * riders database with PG
+  * riders handlers
+* deployment
+  * Dockerfile for backend and frontend
+  * Terraform file for Web App, Postgres, Redis
 * ci
+
+* add multi-Trip view to front-end
