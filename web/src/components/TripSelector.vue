@@ -2,8 +2,10 @@
 // use as input to Trip component
 
 <template>
-  <input type="date" id="date" />
-  <input type="radio" id="direction" />
+  <div>
+    <input type="date" id="date" />
+    <input type="radio" id="direction" />
+  </div>
 </template>
 
 <script>

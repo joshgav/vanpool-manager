@@ -1,5 +1,5 @@
 <template>
-  <div class="trip trip-{{ date }} trip-{{ direction }}">
+  <div class="trip">
     <div class="trip-title">{{ date }} - {{ direction }}</div>
     <div class="trip-button">
       <button v-if="!(present())" action="addRider()">add self</button>
@@ -22,7 +22,7 @@ module.exports = {
 let axios = require('axios')
 
 const apiHostname = 'localhost'
-const apiBasePath = '/api/v1/
+const apiBasePath = '/api/v1/'
 const apiScheme = 'http'
 
 const directions = {
@@ -39,7 +39,7 @@ function Rider(name, date, direction) {
 let riders = []
 
 function data () { return {
-  riders: riders
+  riders: riders,
   currentUser: new Rider()
 }}
 
@@ -89,13 +89,13 @@ function refreshCurrentUser () {
     })
 }
 
-function addRider (rider) {
+function addRider () {
   let rider = new Rider(currentUser.name, this.date, this.direction)
   axios.put(`${apiScheme}://${apiHostname}${apiBasePath}riders`, JSON.stringify(rider))
     .catch(err => { console.log(`failed to add rider: ${err}`) })
 }
 
-function removeRider (rider) {
+function removeRider () {
   let rider = new Rider(currentUser.name, this.date, this.direction)
   // how to do parameterized delete?
   axios.delete(`${apiScheme}://${apiHostname}${apiBasePath}riders`, JSON.stringify(rider))
@@ -108,7 +108,7 @@ function formatDate (date) {
 }
 
 function fixLength (inString) {
-  if inString.length == 1 {
+  if (inString.length == 1) {
     inString = `0${inString}`
   }
   return inString

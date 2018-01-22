@@ -1,25 +1,52 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
+	"net/http"
+
+	mux "github.com/gorilla/mux"
+
+	auth "github.com/joshgav/go-demo/auth"
+	mw "github.com/joshgav/go-demo/middleware"
+	riders "github.com/joshgav/go-demo/riders"
 )
 
+const dir = "./web"
+
 func main(args []string) {
-	r := gin.Default()
-	r.Use(sessionStateHandler())
-	r.Use(authenticationHandler())
+	r := mux.NewRouter()
 
-	r.Static("/", "./dist/assets")
+	// GET /
+	r.Path("/").
+		Use(mw.Session).
+		Use(auth.CheckAuthenticated).
+		Handler(http.StripPrefix("/web/", http.FileServer(http.Dir(dir))))
 
-	auth := r.Group("/auth")
-	auth.GET("/login", authLoginHandler())
-	auth.POST("/code", authCodeHandler())
+	s := r.PathPrefix("/auth").Subrouter
+	// GET /auth/login
+	s.Path("/login").Methods("GET").Handler(auth.LoginHandler)
+	// POST /auth/callback
+	s.Path("/callback").Methods("POST").Handler(auth.AuthzCodeHandler)
 
-	api := r.Group("/api/v1")
+	api := r.PathPrefix("/api/v1").Subrouter.
+		Use(mw.Session).
+		Use(auth.CheckAuthenticated)
 
-	api.GET("/riders", ridersGetHandler())
-	api.PUT("/riders", ridersPutHandler())
-	api.DELETE("/riders", ridersDeleteHandler())
+	// query parameters are coincidentally the same but shouldn't be DRYed
+	// GET /api/v1/riders?date=2018-01-05&direction=in
+	api.Path("/riders").Methods("GET").
+		Queries("date", "{date}", "direction", "{direction}").
+		Handler(riders.GetHandler)
+	// PUT /api/v1/riders?date=2018-01-05&direction=in
+	api.Path("/riders").Methods("PUT").
+		Queries("date", "{date}", "direction", "{direction}").
+		Handler(riders.PutHandler)
+	// DELETE /api/v1/riders?date=2018-01-05&direction=in
+	api.Path("/riders").Methods("DELETE").
+		Queries("date", "{date}", "direction", "{direction}").
+		Handler(riders.DeleteHandler)
 
-	api.GET("/currentUser", currentUserHandler())
+	api.Path("/user").Methods("GET").
+		Handler(auth.UserHandler)
+
+	http.ListenAndServe(":"+port, r)
 }
