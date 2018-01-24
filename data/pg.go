@@ -1,19 +1,19 @@
 package data
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"net/url"
 	"os"
 	"strings"
 
+	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/subosito/gotenv"
 )
 
 var (
-	db         *sql.DB
+	db         *sqlx.DB
 	pgUsername string
 	pgPassword string
 	pgHost     string
@@ -33,8 +33,8 @@ func init() {
 	pgSSLMode = os.Getenv("POSTGRES_SSLMODE")
 }
 
-// connection tries to return an open database
-func connection() (*sql.DB, error) {
+// database tries to return an open database
+func database() (*sqlx.DB, error) {
 	if db != nil {
 		log.Printf("found cached db %v\n", db)
 		err := db.Ping()
@@ -59,7 +59,7 @@ func connection() (*sql.DB, error) {
 	log.Printf("connecting with connstring: %v\n",
 		strings.Replace(connstring, pgPassword, "*", 1))
 
-	dbconn, err := sql.Open("postgres", connstring)
+	dbconn, err := sqlx.Open("postgres", connstring)
 	if err == nil {
 		log.Printf("connected successfully, caching connection\n")
 		db = dbconn // cache for later calls
