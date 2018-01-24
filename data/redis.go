@@ -2,6 +2,7 @@ package data
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/go-redis/redis"
@@ -19,21 +20,23 @@ func init() {
 	gotenv.Load()
 
 	redisPassword = os.Getenv("REDIS_PASSWORD")
-	redisHost = os.Getenv("REDIS_HOSTNAME")
+	redisHostname = os.Getenv("REDIS_HOSTNAME")
 	redisPort = os.Getenv("REDIS_PORT")
 }
 
-func redisConn() *redis.Client {
+func redisConn() (*redis.Client, error) {
 	if client == nil {
+		log.Printf("creating redis client for %s:%s\n", redisHostname, redisPort)
 		client = redis.NewClient(&redis.Options{
 			Addr:     fmt.Sprintf("%s:%s", redisHostname, redisPort),
 			Password: redisPassword,
 			DB:       0,
 		})
 	}
-	_, err := client.Ping().Result()
+	r, err := client.Ping().Result()
+	log.Printf("redis ping result: %v\n", r)
 	if err != nil {
-		log.Fatalf("failed to connect to redis: %v", err)
+		log.Printf("failed to connect to redis: %v\n", err)
 	}
-	return client
+	return client, err
 }
