@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 cd ./web
-npm install
+npm install 
 npm run build
 cd ..
 
@@ -12,6 +12,6 @@ docker run -d --rm \
 
 sleep 3 # give the db a chance to start twice
 
-go test -v github.com/joshgav/go-demo/data
+go test -v github.com/joshgav/go-demo/model
 
 docker container stop postgres_test

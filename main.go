@@ -1,52 +1,49 @@
 package main
 
 import (
+	"log"
 	"net/http"
 
 	mux "github.com/gorilla/mux"
-
-	auth "github.com/joshgav/go-demo/auth"
-	mw "github.com/joshgav/go-demo/middleware"
-	riders "github.com/joshgav/go-demo/riders"
 )
 
-const dir = "./web"
+var (
+	webdir = "./web"
+	port   = GetenvOrDefault("PORT", "8080")
+)
 
-func main(args []string) {
+func main() {
 	r := mux.NewRouter()
 
-	// GET /
-	r.Path("/").
-		Use(mw.Session).
-		Use(auth.CheckAuthenticated).
-		Handler(http.StripPrefix("/web/", http.FileServer(http.Dir(dir))))
+	// client app (SPA)
+	root := r.Path("/").Subrouter()
+	root.Use(Session)
+	root.Use(Authentication)
+	root.Path("/").Handler(http.StripPrefix("/web/", http.FileServer(http.Dir(webdir))))
 
-	s := r.PathPrefix("/auth").Subrouter
-	// GET /auth/login
-	s.Path("/login").Methods("GET").Handler(auth.LoginHandler)
-	// POST /auth/callback
-	s.Path("/callback").Methods("POST").Handler(auth.AuthzCodeHandler)
+	// OAuth authorization code handler
+	r.Path("/login").Methods("POST").HandlerFunc(AuthzCodeHandler)
 
-	api := r.PathPrefix("/api/v1").Subrouter.
-		Use(mw.Session).
-		Use(auth.CheckAuthenticated)
+	api := r.PathPrefix("/api/v1").Subrouter()
+	api.Use(Session)
+	api.Use(Authentication)
 
-	// query parameters are coincidentally the same but shouldn't be DRYed
 	// GET /api/v1/riders?date=2018-01-05&direction=in
 	api.Path("/riders").Methods("GET").
 		Queries("date", "{date}", "direction", "{direction}").
-		Handler(riders.GetHandler)
-	// PUT /api/v1/riders?date=2018-01-05&direction=in
+		HandlerFunc(ridersGetHandler)
+
+	// PUT /api/v1/riders json:*model.Rider
 	api.Path("/riders").Methods("PUT").
-		Queries("date", "{date}", "direction", "{direction}").
-		Handler(riders.PutHandler)
-	// DELETE /api/v1/riders?date=2018-01-05&direction=in
+		HandlerFunc(ridersPutHandler)
+
+	// DELETE /api/v1/riders json:*model.Rider
 	api.Path("/riders").Methods("DELETE").
-		Queries("date", "{date}", "direction", "{direction}").
-		Handler(riders.DeleteHandler)
+		HandlerFunc(ridersDeleteHandler)
 
 	api.Path("/user").Methods("GET").
-		Handler(auth.UserHandler)
+		HandlerFunc(UserHandler)
 
+	log.Printf("starting http server on port %v\n", port)
 	http.ListenAndServe(":"+port, r)
 }
