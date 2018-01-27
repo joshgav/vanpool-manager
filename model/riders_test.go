@@ -1,4 +1,4 @@
-package data
+package model
 
 import (
 	"github.com/satori/go.uuid"

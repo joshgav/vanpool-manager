@@ -6,16 +6,17 @@ import (
 
 func ridersGetHandler(w http.ResponseWriter, r *http.Request) {
 	// read date requested from query string
-	// call into data.getRidersFor5Days(date time.Time) using that date
-	// return a json array of riders
+	// call into model.getRidersFor(date time.Time, direction TravelDirection) using that date
+	// return a json array of *model.Rider
 }
 
 func ridersPutHandler(w http.ResponseWriter, r *http.Request) {
-	// build up data.Rider from JSON
-	// call data.AddRider(data.Rider)
+	// build up model.Rider from JSON
+	// call model.AddRider(rider)
 }
 
 func ridersDeleteHandler(w http.ResponseWriter, r *http.Request) {
-	// call data.DeleteRider(data.Rider)
+	// build up model.Rider from JSON
+	// call model.DeleteRider(rider)
 	// match must be exact { name, date, direction }
 }
