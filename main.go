@@ -22,7 +22,7 @@ func main() {
 	root.Path("/").Handler(http.StripPrefix("/web/", http.FileServer(http.Dir(webdir))))
 
 	// OAuth authorization code handler
-	r.Path("/login").Methods("POST").HandlerFunc(AuthzCodeHandler)
+	r.Path("/login").Methods("GET").HandlerFunc(AuthzCodeHandler)
 
 	api := r.PathPrefix("/api/v1").Subrouter()
 	api.Use(Session)
