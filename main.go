@@ -4,11 +4,11 @@ import (
 	"log"
 	"net/http"
 
-	mux "github.com/gorilla/mux"
+	"github.com/gorilla/mux"
 )
 
 var (
-	webdir = "./web"
+	webdir = "./web/dist/"
 	port   = GetenvOrDefault("PORT", "8080")
 )
 
@@ -16,13 +16,15 @@ func main() {
 	r := mux.NewRouter()
 
 	// client app (SPA)
-	root := r.Path("/").Subrouter()
+	root := r.PathPrefix("/web").Subrouter()
 	root.Use(Session)
 	root.Use(Authentication)
-	root.Path("/").Handler(http.StripPrefix("/web/", http.FileServer(http.Dir(webdir))))
+	root.PathPrefix("/").Handler(http.StripPrefix("/web/", http.FileServer(http.Dir(webdir))))
 
 	// OAuth authorization code handler
-	r.Path("/login").Methods("GET").HandlerFunc(AuthzCodeHandler)
+	login := r.Path("/login").Subrouter()
+	login.Use(Session)
+	login.Methods("GET").HandlerFunc(AuthzCodeHandler)
 
 	api := r.PathPrefix("/api/v1").Subrouter()
 	api.Use(Session)

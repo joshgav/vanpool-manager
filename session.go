@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"os"
 
-	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/joshgav/go-demo/model"
+
 	"github.com/gorilla/sessions"
-	model "github.com/joshgav/go-demo/model"
 	"github.com/subosito/gotenv"
 )
 
@@ -56,12 +56,8 @@ func Session(next http.Handler) http.Handler {
 
 		if _, ok := s.Values[stateKey].(string); ok == false {
 			log.Printf("Session: no state currently in session, adding it\n")
-			// getting state creates it and adds to state if necessary
-			state, err := GetState(w, r)
-			if err != nil {
-				http.Error(w, "failed to get state", http.StatusInternalServerError)
-				log.Printf("Session: failed to get/create state: %v\n")
-			}
+			state := "makemerandom"
+			s.Values[stateKey] = state
 			log.Printf("Session: state set to: %v\n", state)
 		}
 
@@ -94,23 +90,17 @@ func Session(next http.Handler) http.Handler {
 	})
 }
 
-func SetSession(token string, w http.ResponseWriter, r *http.Request) error {
+func SetSession(rider *model.Rider, w http.ResponseWriter, r *http.Request) error {
 	log.Printf("SetSession: getting session %v\n", sessionName)
 	s, err := store.Get(r, sessionName)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "failed to get session", http.StatusInternalServerError)
+		return err
 	}
 
-	t, err := jwt.Parse(token, nil)
-	if err != nil {
-		log.Printf("SetSession: failed to parse JWT: %v\n", err)
-	}
-	log.Printf("SetSession: parsed jwt: %+v\n", t)
-	s.Values[selfKey] = &model.Rider{
-	// TODO: populate based on info from JWT
-	}
+	s.Values[selfKey] = rider
 	s.Save(r, w)
-	return err
+	return nil
 }
 
 func UserHandler(w http.ResponseWriter, r *http.Request) {
@@ -127,16 +117,4 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 		// send an error object
 	}
 	w.Write(json)
-}
-
-func GetState(w http.ResponseWriter, r *http.Request) (string, error) {
-	// log.Printf("GetState: getting session %v\n", sessionName)
-	// s, err := store.Get(r, sessionName)
-	// if err != nil {
-	//   http.Error(w, err.Error(), http.StatusInternalServerError)
-	// }
-
-	// build new state if necessary and save to request session
-
-	return "makemerandom", nil
 }

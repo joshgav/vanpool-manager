@@ -15,3 +15,5 @@ sleep 3 # give the db a chance to start twice
 go test -v github.com/joshgav/go-demo/model
 
 docker container stop postgres_test
+
+# for auth to work, also apply `./oauth2.diff` to golang.org/x/oauth2

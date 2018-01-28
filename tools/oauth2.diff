@@ -1,0 +1,22 @@
+diff --git a/internal/token.go b/internal/token.go
+index e7d078f..d822392 100644
+--- a/internal/token.go
++++ b/internal/token.go
+@@ -6,7 +6,7 @@ package internal
+ 
+ import (
+ 	"encoding/json"
+-	"errors"
++	// "errors"
+ 	"fmt"
+ 	"io"
+ 	"io/ioutil"
+@@ -249,7 +249,7 @@ func RetrieveToken(ctx context.Context, clientID, clientSecret, tokenURL string,
+ 		token.RefreshToken = v.Get("refresh_token")
+ 	}
+ 	if token.AccessToken == "" {
+-		return token, errors.New("oauth2: server response missing access_token")
++		// return token, errors.New("oauth2: server response missing access_token")
+ 	}
+ 	return token, nil
+ }
