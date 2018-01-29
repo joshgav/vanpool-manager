@@ -15,6 +15,11 @@ var (
 func main() {
 	r := mux.NewRouter()
 
+	r.Path("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/web/", http.StatusMovedPermanently)
+		return
+	})
+
 	// client app (SPA)
 	root := r.PathPrefix("/web").Subrouter()
 	root.Use(Session)
@@ -30,6 +35,10 @@ func main() {
 	api.Use(Session)
 	api.Use(Authentication)
 
+	// GET /api/v1/user
+	api.Path("/user").Methods("GET").
+		HandlerFunc(UserHandler)
+
 	// GET /api/v1/riders?date=2018-01-05&direction=in
 	api.Path("/riders").Methods("GET").
 		Queries("date", "{date}", "direction", "{direction}").
@@ -42,9 +51,6 @@ func main() {
 	// DELETE /api/v1/riders json:*model.Rider
 	api.Path("/riders").Methods("DELETE").
 		HandlerFunc(ridersDeleteHandler)
-
-	api.Path("/user").Methods("GET").
-		HandlerFunc(UserHandler)
 
 	log.Printf("starting http server on port %v\n", port)
 	http.ListenAndServe(":"+port, r)

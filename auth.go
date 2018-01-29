@@ -2,26 +2,40 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"time"
 
-	// jwt "github.com/dgrijalva/jwt-go"
 	"github.com/joshgav/go-demo/model"
 
+	jwt "github.com/dgrijalva/jwt-go"
+	uuid "github.com/satori/go.uuid"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/microsoft"
 )
 
 var (
+	oauth2Config *oauth2.Config
+
 	redirectURIf    = "http://%v/login"
 	redirectURIHost string
-	scope           = "openid"
-	tenantID        string
-	clientID        string
-	clientSecret    string
-	oauth2Config    *oauth2.Config
+
+	clientID     string
+	clientSecret string
+	scopes       = []string{
+		"openid",
+		"email",
+		"profile",
+		"offline_access",
+		// must specify a non-OpenID scope to get access token
+		// i.e. if only OpenID scopes are used only id_token
+		// and refresh_token (if offline_access is requested)
+		// are returned
+		"user.read",
+	}
 )
 
 func init() {
@@ -31,7 +45,6 @@ func init() {
 	} else {
 		redirectURIHost = "localhost:8080"
 	}
-	tenantID = os.Getenv("AZ_TENANT_ID") // would "common" be appropriate for a multi-tenant app?
 	clientID = os.Getenv("AZ_CLIENT_ID")
 	clientSecret = os.Getenv("AZ_CLIENT_SECRET")
 
@@ -39,25 +52,28 @@ func init() {
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
 		Endpoint:     microsoft.AzureADEndpoint(""),
-		Scopes:       []string{"openid", "email", "profile", "offline_access"},
+		Scopes:       scopes,
 		RedirectURL:  fmt.Sprintf(redirectURIf, redirectURIHost),
 	}
 }
 
+// Authentication is net/http middleware which checks session to see
+// if current user is authenticated, and if not redirects to a login server
 func Authentication(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Authentication: checking for existing authenticated session\n")
 		var authenticated bool = false
 		authenticated, _ = r.Context().Value(authenticatedKey).(bool)
-		log.Printf("Authentication: authenticated: %s\n", authenticated)
+		log.Printf("Authentication: authenticated: %b\n", authenticated)
 		if authenticated == false {
 			var state, _ = r.Context().Value(stateKey).(string)
 			log.Printf("Authentication: using state: %v\n", state)
 			authorizeURL := oauth2Config.AuthCodeURL(state,
-				oauth2.AccessTypeOffline)
-			// add `oauth2.SetAuthURLParam("response_mode", "form_post")` to arry
+				// seems to not be used by AAD, but passing nil here leads to error
+				// should also add `oauth2.SetAuthURLParam("response_mode", "form_post")` to array
+				oauth2.AccessTypeOnline)
 			log.Printf("Authentication: redirecting to %s\n", authorizeURL)
-			http.Redirect(w, r, authorizeURL, 301)
+			http.Redirect(w, r, authorizeURL, http.StatusFound)
 			return
 		}
 		log.Printf("Authentication: user is authenticated, done\n")
@@ -65,16 +81,24 @@ func Authentication(next http.Handler) http.Handler {
 	})
 }
 
+// AuthzCodeHandler is net/http middleware which expects to receive an authz code
+// from a login server. It uses this to get an OAuth access token and Open ID id_token
+// and populates the session user based on their attributes.
 func AuthzCodeHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("AuthzCodeHandler: extracting code and checking state\n")
 	var ok bool
 	var state string
 	if state, ok = r.Context().Value(stateKey).(string); ok == false {
-		// http.Error("there has to be state")
+		http.Error(w, "AuthzCodeHandler: could not find state\n",
+			http.StatusInternalServerError)
+		return
 	}
 	if state != r.FormValue("state") {
-		log.Printf("state mismatch: state: %s; r.FormValue(\"state\"): %s\n", state, r.FormValue("state"))
-		// http.Redirect("/")
+		log.Printf("AuthzCoeHandler: state mismatch: state: %s; r.FormValue(\"state\"): %s\n",
+			state, r.FormValue("state"))
+		http.Error(w, "AuthzCodeHandler: state doesn't match session's state, rejecting",
+			http.StatusNotAcceptable)
+		return
 	}
 
 	code := r.FormValue("code")
@@ -86,46 +110,66 @@ func AuthzCodeHandler(w http.ResponseWriter, r *http.Request) {
 			http.StatusInternalServerError)
 		return
 	}
-	log.Printf("AuthzCodeHandler: got token: %s\n", token)
-	if idToken, ok := token.Extra("id_token").(string); ok == false {
-		log.Printf("AuthzCodeHandler: but didn't find id_token")
+	log.Printf("AuthzCodeHandler: got token: %+v\n", token)
+
+	idToken, ok := token.Extra("id_token").(string)
+	if ok == false {
+		log.Printf("AuthzCodeHandler: but didn't find id_token\n")
+		http.Error(w, "didn't receive id_token", http.StatusInternalServerError)
+		return
 	} else {
-		log.Printf("AuthzCodeHandler: and id_token: %s\n", idToken)
+		log.Printf("AuthzCodeHandler: and id_token: %+v\n\n", idToken)
 	}
 
-	/*
-		// initial token from token endpoint contains only refresh_token
-		// stash it in a new TokenSource so it will be auto-refreshed
-		// unfortunately when access_token isn't set oauth2.Config.Exchange(...) only returns
-		// an error and token is nil
-		// once it is modified to not return an error,
-		//   the initial token seems to be sufficient
-
-		ts := oauth2Config.TokenSource(ctx, token)
-		c := oauth2.NewClient(ctx, ts)
-		ctx = context.WithValue(ctx, oauth2.HTTPClient, c)
-		token2, err := oauth2Config.Exchange(ctx, code)
-		log.Printf("AuthzCodeHandler: got another token: %v\n", token2)
-		log.Printf("AuthzCodeHandler: got error: %v\n", err)
-		if err != nil {
-			log.Fatalf("AuthzCodeHandler: failed to get access token with refresh token: %v\n", err)
-		}
-	*/
-
-	log.Printf("AuthzCodeHandler: building rider via token: %+v\n", token)
-	rider, err := riderFromJwt(token.AccessToken)
+	log.Printf("AuthzCodeHandler: building rider via id_token: %+v\n", idToken)
+	rider, err := riderFromJwt(idToken)
 	if err != nil {
-		log.Printf("AuthzCodeHandler: failed to build rider from jwt: %v\n", err)
+		log.Printf("AuthzCodeHandler: failed to build rider from jwt: %s\n", err)
 		http.Error(w, "failed to build rider from jwt", http.StatusInternalServerError)
 		return
 	}
 	log.Printf("AuthzCodeHandler: setting state with rider: %v\n", rider)
 	SetSession(rider, w, r)
 	log.Printf("AuthzCodeHandler: done, redirecting to SPA\n")
-	http.Redirect(w, r, "/web/", 301)
+	http.Redirect(w, r, "/web/", http.StatusFound)
 }
 
+// riderFromJwt takes info from an id_token to create a rider with defaults
 func riderFromJwt(_jwt string) (*model.Rider, error) {
-	// jwt.Parse(_jwt)
-	return &model.Rider{}, nil
+	idToken, err := jwt.Parse(_jwt, func(token *jwt.Token) (interface{}, error) {
+		/*
+			// retrieve from https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration
+			// and https://login.microsoftonline.com/common/discovery/v2.0/keys
+			// but doesn't work properly at the moment
+
+			kid := token.Header["kid"].(string)
+			// get key from discovery document, then parse and return
+			verifyKey, err := jwt.ParseRSAPublicKeyFromPEM([]byte(azurePubKey))
+			if err != nil {
+				log.Printf("could not parse public key from string: %#v\n", err)
+			}
+			return verifyKey, nil
+		*/
+		return nil, nil // obviously not acceptable
+	})
+	if err != nil {
+		log.Printf("ridersFromJwt: could not parse id_token %#v\n", err.Error())
+		log.Printf("ridersFromJwt: continuing despite error\n")
+		// return nil, errors.New(fmt.Sprintf("could not parse id_token: %#v", err.Error()))
+	}
+	log.Printf("riderFromJwt: parsed id_token: %#v\n", idToken)
+	claims, ok := idToken.Claims.(jwt.MapClaims)
+	if ok == false {
+		return nil, errors.New("could not find profile claims in id_token\n")
+	}
+	rider := &model.Rider{
+		ID:          uuid.Must(uuid.NewV4()),
+		Username:    claims["email"].(string),
+		DisplayName: claims["name"].(string),
+		// defaults: now, in
+		Date:      parseDate(time.Now()),
+		Direction: model.TravelDirectionInbound,
+	}
+	log.Printf("riderFromJwt: created rider %#v\n", rider)
+	return rider, nil
 }
