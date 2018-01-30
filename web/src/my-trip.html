@@ -1,0 +1,49 @@
+module.exports = `
+<div class="trip">
+  <div class="trip-selector">
+    <label for="date">Date: </label>
+    <input
+      type="date"
+      id="date"
+      v-model="date"
+    />
+
+    <div>
+      <input
+        type="radio"
+        name="direction"
+        value="Inbound"
+        v-bind:checked="isInbound()"
+        v-model="direction"
+      />
+      <label for="directionIn">Inbound</label>
+
+      <input type="radio"
+        id="directionOut"
+        name="direction"
+        value="Outbound"
+        v-bind:checked="!isInbound()"
+        v-model="direction"
+      />
+      <label for="directionOut">Outbound</label>
+    </div>
+  </div>
+
+  <div class="trip-details">
+    <div class="trip-title">
+      {{ this.date }} - {{ this.direction }}
+    </div>
+    <div class="trip-button">
+      <button type="button" v-if="!present()"
+        v-on:click="addRider()">Add self</button>
+      <button type="button" v-if="present()"
+        v-on:click="removeRider()">Remove self</button>
+    </div>
+    <div class="trip-riders">
+      <ul>
+        <li v-for="rider in riders">{{ rider.displayName }}</li>
+      </ul>
+    </div>
+  </div>
+</div>
+`;
