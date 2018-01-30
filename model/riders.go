@@ -125,8 +125,7 @@ func DeleteRider(r *Rider) error {
 	_, err = db.ExecContext(
 		context.Background(),
 		`DELETE FROM riders WHERE
-			username = $2 AND date = $3 AND direction = $4`,
-		tableName,
+			username = $1 AND date = $2 AND direction = $3`,
 		r.Username,
 		r.Date,
 		r.Direction,

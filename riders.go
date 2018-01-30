@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
@@ -43,14 +44,56 @@ func ridersGetHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ridersPutHandler(w http.ResponseWriter, r *http.Request) {
-	// build up model.Rider from JSON
-	// call model.AddRider(rider)
+	log.Printf("ridersPutHandler: hello")
+	_json, err := ioutil.ReadAll(r.Body)
+	log.Printf("ridersPutHandler: body: %s\n", _json)
+	if err != nil {
+		http.Error(w, "could not read request body", http.StatusBadRequest)
+		log.Printf("failed to read request body: %v\n", err)
+		return
+	}
+	var rider *model.Rider
+	err = json.Unmarshal(_json, &rider)
+	if err != nil {
+		http.Error(w, "could not unmarshal json", http.StatusBadRequest)
+		log.Printf("failed to unmarshal json: %v\n", err)
+		return
+	}
+	log.Printf("ridersPutHandler: adding rider: %+v\n", rider)
+	err = model.AddRider(rider)
+	if err != nil {
+		http.Error(w, "could not persist rider", http.StatusInternalServerError)
+		log.Printf("failed to persist rider: %v\n", err)
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
+	return
 }
 
 func ridersDeleteHandler(w http.ResponseWriter, r *http.Request) {
-	// build up model.Rider from JSON
-	// call model.DeleteRider(rider)
-	// match must be exact { name, date, direction }
+	log.Printf("ridersDeleteHandler: hello")
+	_json, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "could not read request body", http.StatusBadRequest)
+		log.Printf("failed to read request body: %v\n", err)
+		return
+	}
+	var rider *model.Rider
+	err = json.Unmarshal(_json, &rider)
+	if err != nil {
+		http.Error(w, "could not unmarshal json", http.StatusBadRequest)
+		log.Printf("failed to unmarshal json: %v\n", err)
+		return
+	}
+	log.Printf("ridersDeleteHandler: deleting rider: %+v\n", rider)
+	err = model.DeleteRider(rider)
+	if err != nil {
+		http.Error(w, "could not delete rider", http.StatusInternalServerError)
+		log.Printf("failed to delete rider: %v\n", err)
+		return
+	}
+	w.WriteHeader(http.StatusAccepted)
+	return
 }
 
 func convertDirection(dir string) string {

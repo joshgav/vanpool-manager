@@ -48,8 +48,8 @@ func main() {
 	api.Path("/riders").Methods("PUT").
 		HandlerFunc(ridersPutHandler)
 
-	// DELETE /api/v1/riders json:*model.Rider
-	api.Path("/riders").Methods("DELETE").
+	// POST /api/v1/riders/delete json:*model.Rider
+	api.Path("/riders/delete").Methods("POST").
 		HandlerFunc(ridersDeleteHandler)
 
 	log.Printf("starting http server on port %v\n", port)

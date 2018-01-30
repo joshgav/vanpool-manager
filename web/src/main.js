@@ -1,9 +1,7 @@
 import axios from 'axios'
 import Vue from 'vue'
 
-const apiHostname = 'localhost:8080'
-const apiBasePath = '/api/v1/'
-const apiScheme = 'http'
+const apiBasePath = '/api/v1'
 
 Vue.component("my-trip", {
 
@@ -11,31 +9,47 @@ Vue.component("my-trip", {
 
   data: function data() { return {
     riders: [],
-    user: new this.Rider(),
+    user: {},
     date: this.formatDate(new Date()),
     direction: "Inbound"
   }},
 
   watch: {
     date: {
-      handler: function Handler() {this.refresh(false)},
+      handler: function() {this.refresh(false)},
     },
     direction: {
-      handler: function Handler() {this.refresh(false)},
+      handler: function() {this.refresh(false)},
     },
   },
 
-  mounted: function() {
+  mounted: function mounted() {
     this.refresh(true)
   },
 
-  methods: {
+  computed: {
+    present: function present() {
+      for (let rider of this.riders) {
+        if (rider.username == this.user.username) {
+          return true
+        }
+      }
+      return false
+    },
 
-    Rider: function Rider(username, displayName, date, direction) {
-      this.username = "" + username;
-      this.displayName = "" + displayName;
-      this.date = this.formatDate(date ? date : new Date());
-      this.direction = direction;
+    isInbound: function isInbound() {
+      return (this.direction === "Inbound" || this.direction === "I")
+    },
+  },
+
+  methods: {
+    MakeRider: function makeRider(username, displayName, date, direction) {
+      return {
+        username: username,
+        displayName: displayName,
+        date: date,
+        direction: direction
+      }
     },
 
     refresh: function refresh(force) {
@@ -49,11 +63,11 @@ Vue.component("my-trip", {
     // @param direction 'O' or 'I'
     refreshRiders: function refreshRiders(date, direction) {
       var self = this
-      let baseUrl = `${apiScheme}://${apiHostname}${apiBasePath}riders`
+      let baseUrl = `${apiBasePath}/riders`
       let queryParams = `?date=${this.formatDate(date)}&direction=${direction}`
       axios.get(`${baseUrl}${queryParams}`, {resposeType:'json'})
         .then(response => {
-          console.log(`got riders: ${response.data}`)
+          // console.log(`got riders: ${response.data}`)
           self.riders = response.data
         })
         .catch(err => {
@@ -62,22 +76,16 @@ Vue.component("my-trip", {
         })
     },
 
-    present: function present() {
-      for (var rider in this.riders) {
-        if (rider.username == this.user.username) {
-          return true
-        }
-      }
-      return false
-    },
-
     refreshUser: function refreshUser(force) {
       var self = this
-      if (!force && this.user && this.user.username) { return }
-      let baseUrl = `${apiScheme}://${apiHostname}${apiBasePath}user`
+      if (!force && this.user && this.user.username) {
+        // console.log(`user already set: ${this.user.username}`)
+        return
+      }
+      let baseUrl = `${apiBasePath}/user`
       axios.get(baseUrl, {resposeType:'json'})
         .then(response => {
-          console.log(`got current user: ${response.data}`)
+         // console.log(`got current user: ${response.data.username}`)
           self.user = response.data
         })
         .catch(err => {
@@ -88,35 +96,38 @@ Vue.component("my-trip", {
 
     addRider: function addRider() {
       axios.put(
-        `${apiScheme}://${apiHostname}${apiBasePath}riders`,
-        JSON.stringify(this.getRider())
-       )
+        `${apiBasePath}/riders`, this.getRider()
+      )
+      .then(response => {
+        this.refresh(false)
+      })
       .catch(err => {
         console.log(`failed to add rider: ${err}`)
       })
     },
 
     removeRider: function removeRider() {
-      axios.delete(
-        `${apiScheme}://${apiHostname}${apiBasePath}riders`,
-        JSON.stringify(this.getRider())
+      axios.post(
+        `${apiBasePath}/riders/delete`, this.getRider()
       )
+      .then(response => {
+        this.refresh(false)
+      })
       .catch(err => {
         console.log(`failed to remove rider: ${err}`)
       })
     },
 
     getRider: function getRider() {
-      return new this.Rider(
+      return this.makeRider(
         this.user.username,
         this.user.displayName,
-        this.formatDate(this.date),
-        this.parseDirection(this.direction),
+        this.date,
+        this.parseDirection(this.direction)
       )
     },
 
     formatDate: function formatDate(_date) {
-      console.log(`formatting date: ${_date}`)
       var date
       try { date = new Date(_date) } catch (e) {}
       if (date != null) {
@@ -124,7 +135,6 @@ Vue.component("my-trip", {
         let month = this.fixLength(date.getUTCMonth() + 1)
         let day   = this.fixLength(date.getUTCDate())
         let formattedDate = `${year}-${month}-${day}`
-        console.log(`as: ${formattedDate}`)
         return formattedDate
       }
       else {
@@ -138,10 +148,6 @@ Vue.component("my-trip", {
         _in = `0${_in}`
       }
       return _in
-    },
-
-    isInbound: function isInbound() {
-      return (this.direction === "inbound")
     },
 
     parseDirection: function parseDirection(dir) {

@@ -13,7 +13,7 @@ module.exports = `
         type="radio"
         name="direction"
         value="Inbound"
-        v-bind:checked="isInbound()"
+        v-bind:checked="isInbound"
         v-model="direction"
       />
       <label for="directionIn">Inbound</label>
@@ -22,7 +22,7 @@ module.exports = `
         id="directionOut"
         name="direction"
         value="Outbound"
-        v-bind:checked="!isInbound()"
+        v-bind:checked="!isInbound"
         v-model="direction"
       />
       <label for="directionOut">Outbound</label>
@@ -34,9 +34,9 @@ module.exports = `
       {{ this.date }} - {{ this.direction }}
     </div>
     <div class="trip-button">
-      <button type="button" v-if="!present()"
+      <button type="button" v-if="!present"
         v-on:click="addRider()">Add self</button>
-      <button type="button" v-if="present()"
+      <button type="button" v-if="present"
         v-on:click="removeRider()">Remove self</button>
     </div>
     <div class="trip-riders">
