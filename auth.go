@@ -20,8 +20,8 @@ import (
 var (
 	oauth2Config *oauth2.Config
 
-	redirectURIf    = "http://%v/login"
-	redirectURIHost string
+	redirectURIf        = "http://%v/login"
+	redirectURIHostname string
 
 	clientID     string
 	clientSecret string
@@ -39,12 +39,7 @@ var (
 )
 
 func init() {
-	hostname := os.Getenv("WEBAPP_HOSTNAME")
-	if len(hostname) > 0 {
-		redirectURIHost = hostname
-	} else {
-		redirectURIHost = "localhost:8080"
-	}
+	redirectURIHostname := GetenvOrDefault("REDIRECT_HOSTNAME", "localhost:8080")
 	clientID = os.Getenv("AZ_CLIENT_ID")
 	clientSecret = os.Getenv("AZ_CLIENT_SECRET")
 
@@ -53,7 +48,7 @@ func init() {
 		ClientSecret: clientSecret,
 		Endpoint:     microsoft.AzureADEndpoint(""),
 		Scopes:       scopes,
-		RedirectURL:  fmt.Sprintf(redirectURIf, redirectURIHost),
+		RedirectURL:  fmt.Sprintf(redirectURIf, redirectURIHostname),
 	}
 }
 

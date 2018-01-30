@@ -43,7 +43,7 @@ Vue.component("my-trip", {
   },
 
   methods: {
-    MakeRider: function makeRider(username, displayName, date, direction) {
+    makeRider: function makeRider(username, displayName, date, direction) {
       return {
         username: username,
         displayName: displayName,
