@@ -74,7 +74,7 @@ func parseDate(date time.Time) string {
 	return fmt.Sprintf("%d-%02d-%02d", date.Year(), date.Month(), date.Day())
 }
 
-func getRidersFor(date time.Time, direction TravelDirection) ([]Rider, error) {
+func GetRidersFor(date time.Time, direction TravelDirection) ([]Rider, error) {
 	db, err := database()
 	if err != nil {
 		log.Fatalf("failed to get open database: %s\n", err)
@@ -97,7 +97,7 @@ func getRidersFor(date time.Time, direction TravelDirection) ([]Rider, error) {
 	return _riders, err
 }
 
-func addRider(r *Rider) error {
+func AddRider(r *Rider) error {
 	db, err := database()
 	if err != nil {
 		log.Fatalf("failed to get open database: %s\n", err)
@@ -116,7 +116,7 @@ func addRider(r *Rider) error {
 	return err
 }
 
-func deleteRider(r *Rider) error {
+func DeleteRider(r *Rider) error {
 	db, err := database()
 	if err != nil {
 		log.Fatalf("failed to get open database: %s\n", err)

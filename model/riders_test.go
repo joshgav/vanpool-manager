@@ -26,7 +26,7 @@ func TestTableWorks(t *testing.T) {
 		Date:        date,
 		Direction:   direction,
 	}
-	err = addRider(rider1)
+	err = AddRider(rider1)
 	if err != nil {
 		t.Errorf("failed to add rider: %s\n", err)
 	}
@@ -38,14 +38,14 @@ func TestTableWorks(t *testing.T) {
 		Date:        date,
 		Direction:   direction,
 	}
-	err = addRider(rider2)
+	err = AddRider(rider2)
 	if err != nil {
 		t.Errorf("failed to add rider: %s\n", err)
 	}
 
 	d, _ := time.Parse("2006-01-02", date)
 
-	riders, err := getRidersFor(d, direction)
+	riders, err := GetRidersFor(d, direction)
 	if err != nil {
 		t.Errorf("failed to get riders: %s\n", err)
 	} else {
