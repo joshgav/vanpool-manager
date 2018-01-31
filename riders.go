@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -30,7 +31,9 @@ func ridersGetHandler(w http.ResponseWriter, r *http.Request) {
 	fullDate, err := time.Parse("2006-01-02", date)
 	riders, err := model.GetRidersFor(fullDate, model.TravelDirection(direction))
 	if err != nil {
-		http.Error(w, "could not get riders", http.StatusInternalServerError)
+		e := fmt.Sprintf("could not get riders: %s\n", err)
+		http.Error(w, e, http.StatusInternalServerError)
+		return
 	}
 
 	log.Printf("ridersGetHandler: returning riders: %v\n", riders)
@@ -38,6 +41,7 @@ func ridersGetHandler(w http.ResponseWriter, r *http.Request) {
 	_, err = w.Write(j)
 	if err != nil {
 		http.Error(w, "could not marshal riders into json", http.StatusInternalServerError)
+		return
 	}
 	log.Printf("ridersGetHandler: done\n")
 	return

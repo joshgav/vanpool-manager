@@ -77,7 +77,7 @@ func Session(next http.Handler) http.Handler {
 		}
 
 		log.Printf("Session: saving session (%v)\n", s)
-		s.Save(r, w)
+		_ = s.Save(r, w)
 
 		log.Printf("Session: adding session data to context for ensuing modules\n")
 		var ctx context.Context
@@ -99,8 +99,8 @@ func SetSession(rider *model.Rider, w http.ResponseWriter, r *http.Request) erro
 	}
 
 	s.Values[selfKey] = rider
-	s.Save(r, w)
-	return nil
+	err = s.Save(r, w)
+	return err
 }
 
 func UserHandler(w http.ResponseWriter, r *http.Request) {

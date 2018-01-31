@@ -20,7 +20,8 @@ import (
 var (
 	oauth2Config *oauth2.Config
 
-	redirectURIf        = "http://%v/login"
+	// redirectURIf        = "http://%v/login"
+	redirectURIf        = "https://%v/login"
 	redirectURIHostname string
 
 	clientID     string
