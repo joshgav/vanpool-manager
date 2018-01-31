@@ -28,6 +28,15 @@ type Rider struct {
 	Direction   TravelDirection `json:"direction" db:"direction"`
 }
 
+func init() {
+	var err error
+	err = createTableIfNotExists()
+	if err != nil {
+		log.Printf("failed to create table: %s\n", err)
+		// CHANGE TO: log.Errorf("failed to create table: %s\n", err)
+	}
+}
+
 func createTableIfNotExists() error {
 	log.Printf("createTableIfNotExists()\n")
 	if tableExists(tableName) {
@@ -47,6 +56,7 @@ func createTableIfNotExists() error {
 		date date,
 		direction char(1)
 		);`
+	log.Printf("going to create table\n")
 	_, err = db.ExecContext(context.Background(), q_create_table)
 	return err
 }
@@ -66,7 +76,7 @@ func tableExists(name string) bool {
 	var exists bool
 	rows.Next()
 	_ = rows.Scan(&exists)
-	log.Printf("table exists")
+	log.Printf("table exists? %s\n", exists)
 	return exists
 }
 

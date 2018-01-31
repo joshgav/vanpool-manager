@@ -1,17 +1,26 @@
 #!/usr/bin/env bash
-cd ./web
-npm install 
-npm run build
-cd ..
+export IMAGE_TAG=joshgav/vanpool-manager:latest
+export PG_CONTAINER_NAME=test_postgres_db
+export API_CONTAINER_NAME=test_riders_api
+export PACKAGE_NAME=joshgav/go-demo
 
-docker run -d --rm \
+docker container stop ${API_CONTAINER_NAME}
+docker container stop ${PG_CONTAINER_NAME}
+
+docker build --tag ${IMAGE_TAG} .
+
+docker run --detach --rm \
   --publish 5432:5432 \
   --env-file .env \
-  --name postgres_test \
+  --name ${PG_CONTAINER_NAME} \
   postgres:latest
 
-sleep 3 # give the db a chance to start twice
+# give db chance to initialize
+sleep 3
 
-go test -v github.com/joshgav/go-demo/model
+docker run --detach --rm \
+  --publish 8080:8080 \
+  --env-file .env \
+  --name ${API_CONTAINER_NAME} \
+  ${IMAGE_TAG}
 
-docker container stop postgres_test

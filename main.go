@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	webdir = "./web/dist/"
+	webdir = "./web/dist"
 	port   = GetenvOrDefault("PORT", "8080")
 )
 

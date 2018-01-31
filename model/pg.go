@@ -14,22 +14,22 @@ import (
 
 var (
 	db         *sqlx.DB
-	pgUsername string
+	pgUser     string
 	pgPassword string
-	pgHost     string
+	pgHostname string
 	pgPort     string
-	pgDBName   string
+	pgDB       string
 	pgSSLMode  string
 )
 
 func init() {
 	gotenv.Load()
 
-	pgUsername = os.Getenv("POSTGRES_USER")
+	pgUser = os.Getenv("POSTGRES_USER")
 	pgPassword = os.Getenv("POSTGRES_PASSWORD")
-	pgHost = os.Getenv("POSTGRES_HOSTNAME")
+	pgHostname = os.Getenv("POSTGRES_HOSTNAME")
 	pgPort = os.Getenv("POSTGRES_PORT")
-	pgDBName = os.Getenv("POSTGRES_DB")
+	pgDB = os.Getenv("POSTGRES_DB")
 	pgSSLMode = os.Getenv("POSTGRES_SSLMODE")
 }
 
@@ -48,11 +48,11 @@ func database() (*sqlx.DB, error) {
 
 	connstring := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
-		pgUsername,
+		pgUser,
 		url.QueryEscape(pgPassword),
-		pgHost,
+		pgHostname,
 		pgPort,
-		pgDBName,
+		pgDB,
 		pgSSLMode,
 	)
 

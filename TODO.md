@@ -1,28 +1,14 @@
 ## v1
 
 1. frontend
-    * test with complete backend
-    * add app insights to JS
-2. finish backend implementation
-    * implement riders api handlers
+    * tests
+    * app insights
+2. backend
+    * tests: auth, session, riders
     * use Redis for session store
-3. deployment
+    * app insights
+3. platform
     * Dockerfile for Go app
     * Terraform file for Web App, Postgres, Redis in Azure
-4. ci
+4. build
 
----
-
-## v2
-
-1. frontend
-    * add app insights to JS
-    * add multi-Trip view to front-end
-2. backend
-    * add app insights to Go
-    * more instrumentation/logging for gorilla/mux router and routes
-    * add tests for auth handlers
-    * add tests for session handler
-3. general
-    * change name of project
-    * add README
