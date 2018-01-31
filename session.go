@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/joshgav/go-demo/model"
+	"github.com/joshgav/vanpool-manager/model"
 
 	"github.com/gorilla/sessions"
 	"github.com/subosito/gotenv"

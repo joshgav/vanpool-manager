@@ -7,7 +7,7 @@ RUN npm run build
 
 
 FROM golang:latest as api-builder
-ENV PACKAGE_NAME=github.com/joshgav/go-demo
+ENV PACKAGE_NAME=github.com/joshgav/vanpool-manager
 ENV DEP_VERSION=0.4.1
 RUN curl -fsSL -o /usr/local/bin/dep https://github.com/golang/dep/releases/download/v${DEP_VERSION}/dep-linux-amd64 && chmod +x /usr/local/bin/dep
 WORKDIR /go/src/${PACKAGE_NAME}
@@ -17,7 +17,7 @@ RUN GOOS=linux go build -a -v -o server
 
 
 FROM golang:latest
-ENV PACKAGE_NAME=github.com/joshgav/go-demo
+ENV PACKAGE_NAME=github.com/joshgav/vanpool-manager
 ENV PORT=8080
 EXPOSE ${PORT}
 WORKDIR /app

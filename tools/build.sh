@@ -2,7 +2,7 @@
 export IMAGE_TAG=joshgav/vanpool-manager:latest
 export PG_CONTAINER_NAME=test_postgres_db
 export API_CONTAINER_NAME=test_riders_api
-export PACKAGE_NAME=joshgav/go-demo
+export PACKAGE_NAME=joshgav/vanpool-manager
 
 docker container stop ${API_CONTAINER_NAME}
 docker container stop ${PG_CONTAINER_NAME}

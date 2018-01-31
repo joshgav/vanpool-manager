@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/joshgav/go-demo/model"
+	"github.com/joshgav/vanpool-manager/model"
 
 	jwt "github.com/dgrijalva/jwt-go"
 	uuid "github.com/satori/go.uuid"
@@ -20,8 +20,8 @@ import (
 var (
 	oauth2Config *oauth2.Config
 
-	// redirectURIf        = "http://%v/login"
-	redirectURIf        = "https://%v/login"
+	redirectURIf        = "%v://%v/login"
+	redirectURIScheme   string
 	redirectURIHostname string
 
 	clientID     string
@@ -40,6 +40,7 @@ var (
 )
 
 func init() {
+	redirectURIScheme := GetenvOrDefault("REDIRECT_SCHEME", "https")
 	redirectURIHostname := GetenvOrDefault("REDIRECT_HOSTNAME", "localhost:8080")
 	clientID = os.Getenv("AZ_CLIENT_ID")
 	clientSecret = os.Getenv("AZ_CLIENT_SECRET")
@@ -49,7 +50,7 @@ func init() {
 		ClientSecret: clientSecret,
 		Endpoint:     microsoft.AzureADEndpoint(""),
 		Scopes:       scopes,
-		RedirectURL:  fmt.Sprintf(redirectURIf, redirectURIHostname),
+		RedirectURL:  fmt.Sprintf(redirectURIf, redirectURIScheme, redirectURIHostname),
 	}
 }
 

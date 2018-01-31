@@ -1,10 +1,10 @@
 {
-  "name": "go-demo",
+  "name": "vanpool-manager",
   "version": "0.0.1",
-  "description": "frontend for go-demo",
+  "description": "frontend for vanpool-manager",
   "repository": {
     "type": "git",
-    "url": "github.com/joshgav/go-demo"
+    "url": "github.com/joshgav/vanpool-manager"
   },
   "keywords": [
     "golang",

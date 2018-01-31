@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/joshgav/go-demo/model"
+	"github.com/joshgav/vanpool-manager/model"
 )
 
 func ridersGetHandler(w http.ResponseWriter, r *http.Request) {
