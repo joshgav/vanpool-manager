@@ -3,22 +3,21 @@
 __file=${BASH_SOURCE[0]}
 __dir=$(cd $(dirname ${__file}) && pwd)
 __root=$(cd ${__dir}/../ && pwd)
-set -o allexport
 if [[ -f ${__root}/.env ]]; then source ${__root}/.env; fi
 
-group_name=${1:-${GROUP_NAME}}
-acr_name=${2:-${ACR_NAME}}
+run_build_task=${1:-1}
+group_name=${2:-${GROUP_NAME}}
 webapp_name=${3:-${WEBAPP_NAME}}
-location=${4:-${DEFAULT_LOCATION}}
-gh_token=${5:-${GH_TOKEN}}
-pg_hostname=${6:-${PG_SERVER_NAME}}
+acr_name=${4:-${ACR_NAME}}
+pg_hostname=${5:-${PG_SERVER_NAME}}
+location=${6:-${DEFAULT_LOCATION}}
+gh_token=${7:-${GH_TOKEN}}
 
 plan_name="${webapp_name}-plan"
-project_name=joshgav/vanpool-manager
-image_uri=${project_name}:latest
-tag=${acr_name}.azurecr.io/${image_uri}
 
-set +o allexport
+project_name=joshgav/vanpool-manager
+image_tag=latest
+image_uri=${acr_name}.azurecr.io/${project_name}:${image_tag}
 
 # create group
 group_id=$(az group show --name ${group_name} --output tsv --query id 2> /dev/null)
@@ -26,6 +25,7 @@ if [[ -z $group_id ]]; then
   group_id=$(az group create --name ${group_name} --location ${location} \
     --output tsv --query id)
 fi
+echo "group_id: $group_id"
 
 # create registry
 acr_id=$(az acr show --name ${acr_name} \
@@ -48,13 +48,11 @@ echo "acr_url: ${acr_url}"
 
 # create container build-task
 buildtask_name=buildoncommit
-firstrun=false
 buildtask_id=$(az acr build-task show \
     --name ${buildtask_name} \
     --registry ${acr_name} \
     --resource-group ${group_name} 2> /dev/null)
 if [[ -z "$buildtask_id" ]]; then
-    firstrun=true
     buildtask_id=$(az acr build-task create \
         --context "https://github.com/${project_name}" \
         --git-access-token $gh_token \
@@ -65,7 +63,7 @@ if [[ -z "$buildtask_id" ]]; then
         --commit-trigger-enabled true \
         --output tsv --query id)
 fi
-if [[ $firstrun == "true" ]]; then
+if [[ "$run_build_task" == "1" ]]; then
     az acr build-task run --no-logs \
         --name ${buildtask_name} \
         --registry ${acr_name} \
@@ -121,7 +119,7 @@ fi
 az webapp config container set \
  --ids $webapp_id \
  --docker-registry-server-url "https://${acr_url}" \
- --docker-custom-image-name "${acr_url}/${image_uri}"
+ --docker-custom-image-name "${acr_url}/${project_name}:${image_tag}"
 
 az webapp config appsettings set \
  --ids $webapp_id \
@@ -138,7 +136,18 @@ az webapp config appsettings set \
      "REDIRECT_HOSTNAME=${webapp_name}.azurewebsites.net"
 
 # create cache
-# az redis create ...
+redis_id=$(az redis show --name ${redis_name} --resource-group ${group_name} \
+    --output tsv --query id)
+if [[ -z $redis_id ]]; then
+    redis_id=$(az redis create \
+        --name ${redis_name} \
+        --resource-group ${group_name} \
+        --location ${location} \
+        --sku 'Standard' \
+        --vm-size 'C4' \
+        --output tsv --query id)
+fi
+echo "redis_id: $redis_id"
 
 # create service bus
 # az servicebus create ...
