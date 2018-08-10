@@ -153,8 +153,11 @@ func riderFromJwt(_jwt string) (*model.Rider, error) {
 	})
 	if err != nil {
 		log.Printf("ridersFromJwt: could not parse id_token %#v\n", err.Error())
-		// log.Printf("ridersFromJwt: continuing despite error\n")
-		return nil, errors.New(fmt.Sprintf("could not parse id_token: %#v", err.Error()))
+		if err.Error() == "key is of invalid type" {
+			log.Printf("ridersFromJwt: continuing despite error\n")
+		} else {
+			return nil, errors.New(fmt.Sprintf("could not parse id_token: %#v", err.Error()))
+		}
 	}
 	log.Printf("riderFromJwt: parsed id_token: %#v\n", idToken)
 	claims, ok := idToken.Claims.(jwt.MapClaims)
