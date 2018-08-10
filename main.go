@@ -1,18 +1,25 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/mux"
 )
 
 var (
 	webdir = "./web/dist"
-	port   = GetenvOrDefault("PORT", "8080")
 )
 
 func main() {
+	var port string
+	if port = os.Getenv("PORT"); port == "" {
+		port = "8080"
+	}
+	port = fmt.Sprintf(":%s", port) // prepend colon
+
 	r := mux.NewRouter()
 
 	r.Path("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -24,7 +31,8 @@ func main() {
 	root := r.PathPrefix("/web").Subrouter()
 	root.Use(Session)
 	root.Use(Authentication)
-	root.PathPrefix("/").Handler(http.StripPrefix("/web/", http.FileServer(http.Dir(webdir))))
+	root.PathPrefix("/").Handler(
+		http.StripPrefix("/web/", http.FileServer(http.Dir(webdir))))
 
 	// OAuth authorization code handler
 	login := r.Path("/login").Subrouter()
@@ -39,7 +47,7 @@ func main() {
 	api.Path("/user").Methods("GET").
 		HandlerFunc(UserHandler)
 
-	// GET /api/v1/riders?date=2018-01-05&direction=in
+	// GET /api/v1/riders?date=2018-12-01&direction=in
 	api.Path("/riders").Methods("GET").
 		Queries("date", "{date}", "direction", "{direction}").
 		HandlerFunc(ridersGetHandler)
@@ -53,5 +61,5 @@ func main() {
 		HandlerFunc(ridersDeleteHandler)
 
 	log.Printf("starting http server on port %v\n", port)
-	http.ListenAndServe(":"+port, r)
+	log.Fatal(http.ListenAndServe(port, r))
 }

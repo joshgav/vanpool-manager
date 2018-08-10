@@ -42,8 +42,8 @@ var (
 func init() {
 	redirectURIScheme := GetenvOrDefault("REDIRECT_SCHEME", "https")
 	redirectURIHostname := GetenvOrDefault("REDIRECT_HOSTNAME", "localhost:8080")
-	clientID = os.Getenv("AZ_CLIENT_ID")
-	clientSecret = os.Getenv("AZ_CLIENT_SECRET")
+	clientID = os.Getenv("AZURE_CLIENT_ID")
+	clientSecret = os.Getenv("AZURE_CLIENT_SECRET")
 
 	oauth2Config = &oauth2.Config{
 		ClientID:     clientID,
@@ -60,19 +60,19 @@ func Authentication(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Authentication: checking for existing authenticated session\n")
 		var authenticated bool = false
-		authenticated, _ = r.Context().Value(authenticatedKey).(bool)
+		authenticated = r.Context().Value(authenticatedKey).(bool)
 		log.Printf("Authentication: authenticated: %b\n", authenticated)
 		if authenticated == false {
-			var state, _ = r.Context().Value(stateKey).(string)
+			var state = r.Context().Value(stateKey).(string)
 			log.Printf("Authentication: using state: %v\n", state)
 			authorizeURL := oauth2Config.AuthCodeURL(state,
 				// seems to not be used by AAD, but passing nil here leads to error
-				// should also add `oauth2.SetAuthURLParam("response_mode", "form_post")` to array
 				oauth2.AccessTypeOnline)
 			log.Printf("Authentication: redirecting to %s\n", authorizeURL)
 			http.Redirect(w, r, authorizeURL, http.StatusFound)
 			return
 		}
+		// authenticated == true
 		log.Printf("Authentication: user is authenticated, done\n")
 		next.ServeHTTP(w, r)
 	})
@@ -91,7 +91,8 @@ func AuthzCodeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if state != r.FormValue("state") {
-		log.Printf("AuthzCoeHandler: state mismatch: state: %s; r.FormValue(\"state\"): %s\n",
+		log.Printf(
+			"AuthzCodeHandler: state mismatch: have: %s; got: %s\n",
 			state, r.FormValue("state"))
 		http.Error(w, "AuthzCodeHandler: state doesn't match session's state, rejecting",
 			http.StatusNotAcceptable)
@@ -125,6 +126,7 @@ func AuthzCodeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to build rider from jwt", http.StatusInternalServerError)
 		return
 	}
+
 	log.Printf("AuthzCodeHandler: setting state with rider: %v\n", rider)
 	SetSession(rider, w, r)
 	log.Printf("AuthzCodeHandler: done, redirecting to SPA\n")
@@ -151,8 +153,8 @@ func riderFromJwt(_jwt string) (*model.Rider, error) {
 	})
 	if err != nil {
 		log.Printf("ridersFromJwt: could not parse id_token %#v\n", err.Error())
-		log.Printf("ridersFromJwt: continuing despite error\n")
-		// return nil, errors.New(fmt.Sprintf("could not parse id_token: %#v", err.Error()))
+		// log.Printf("ridersFromJwt: continuing despite error\n")
+		return nil, errors.New(fmt.Sprintf("could not parse id_token: %#v", err.Error()))
 	}
 	log.Printf("riderFromJwt: parsed id_token: %#v\n", idToken)
 	claims, ok := idToken.Claims.(jwt.MapClaims)

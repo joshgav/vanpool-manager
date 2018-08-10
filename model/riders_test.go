@@ -1,10 +1,11 @@
 package model
 
 import (
-	"github.com/satori/go.uuid"
 	"log"
 	"testing"
 	"time"
+
+	"github.com/satori/go.uuid"
 )
 
 func TestTableWorks(t *testing.T) {
