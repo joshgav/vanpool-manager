@@ -1,4 +1,4 @@
-package main
+package auth
 
 import (
 	"context"
@@ -9,7 +9,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/joshgav/vanpool-manager/model"
+	"github.com/joshgav/vanpool-manager/pkg/model"
+	"github.com/joshgav/vanpool-manager/pkg/session"
+	"github.com/joshgav/vanpool-manager/pkg/util"
 
 	jwt "github.com/dgrijalva/jwt-go"
 	uuid "github.com/satori/go.uuid"
@@ -40,15 +42,21 @@ var (
 )
 
 func init() {
-	redirectURIScheme := GetenvOrDefault("REDIRECT_SCHEME", "https")
-	redirectURIHostname := GetenvOrDefault("REDIRECT_HOSTNAME", "localhost:8080")
-	clientID = os.Getenv("AZURE_CLIENT_ID")
-	clientSecret = os.Getenv("AZURE_CLIENT_SECRET")
+	redirectURIScheme := util.GetenvOrDefault("OAUTH_LOGIN_SCHEME", "https")
+	redirectURIHostname := util.GetenvOrDefault("OAUTH_LOGIN_HOSTNAME", "localhost:8080")
+	clientID = os.Getenv("OAUTH_CLIENT_ID")
+  if clientID == "" {
+    log.Fatalln("Supply a ClientID in OAUTH_CLIENT_ID")
+  }
+	clientSecret = os.Getenv("OAUTH_CLIENT_SECRET")
+  if clientSecret == "" {
+    log.Fatalln("Supply a client secret in OAUTH_CLIENT_SECRET")
+  }
 
 	oauth2Config = &oauth2.Config{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
-		Endpoint:     microsoft.AzureADEndpoint(""),
+		Endpoint:     microsoft.AzureADEndpoint(""), // Note: AADv2
 		Scopes:       scopes,
 		RedirectURL:  fmt.Sprintf(redirectURIf, redirectURIScheme, redirectURIHostname),
 	}
@@ -59,22 +67,19 @@ func init() {
 func Authentication(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Authentication: checking for existing authenticated session\n")
-		var authenticated bool = false
-		authenticated = r.Context().Value(authenticatedKey).(bool)
-		log.Printf("Authentication: authenticated: %b\n", authenticated)
-		if authenticated == false {
-			var state = r.Context().Value(stateKey).(string)
+		authenticated, ok := r.Context().Value(session.AuthenticatedKey).(bool)
+		log.Printf("Authentication: authenticated?: %b\n", authenticated)
+		if (ok == false || authenticated == false) {
+			state := r.Context().Value(session.StateKey).(string)
 			log.Printf("Authentication: using state: %v\n", state)
-			authorizeURL := oauth2Config.AuthCodeURL(state,
-				// seems to not be used by AAD, but passing nil here leads to error
-				oauth2.AccessTypeOnline)
+			authorizeURL := oauth2Config.AuthCodeURL(state, oauth2.AccessTypeOnline)
 			log.Printf("Authentication: redirecting to %s\n", authorizeURL)
 			http.Redirect(w, r, authorizeURL, http.StatusFound)
 			return
-		}
-		// authenticated == true
-		log.Printf("Authentication: user is authenticated, done\n")
-		next.ServeHTTP(w, r)
+		} else { // authenticated == true
+      log.Printf("Authentication: user is authenticated, done\n")
+      next.ServeHTTP(w, r)
+    }
 	})
 }
 
@@ -83,16 +88,14 @@ func Authentication(next http.Handler) http.Handler {
 // and populates the session user based on their attributes.
 func AuthzCodeHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("AuthzCodeHandler: extracting code and checking state\n")
-	var ok bool
-	var state string
-	if state, ok = r.Context().Value(stateKey).(string); ok == false {
+	state, ok := r.Context().Value(session.StateKey).(string)
+  if ok == false {
 		http.Error(w, "AuthzCodeHandler: could not find state\n",
 			http.StatusInternalServerError)
 		return
 	}
 	if state != r.FormValue("state") {
-		log.Printf(
-			"AuthzCodeHandler: state mismatch: have: %s; got: %s\n",
+		log.Printf("AuthzCodeHandler: state mismatch: have: %s; got: %s\n",
 			state, r.FormValue("state"))
 		http.Error(w, "AuthzCodeHandler: state doesn't match session's state, rejecting",
 			http.StatusNotAcceptable)
@@ -128,14 +131,12 @@ func AuthzCodeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("AuthzCodeHandler: setting state with rider: %v\n", rider)
-	SetSession(rider, w, r)
+	session.SetSession(rider, w, r)
 	log.Printf("AuthzCodeHandler: done, redirecting to SPA\n")
 	http.Redirect(w, r, "/web/", http.StatusFound)
 }
 
-// riderFromJwt takes info from an id_token to create a rider with defaults
-func riderFromJwt(_jwt string) (*model.Rider, error) {
-	idToken, err := jwt.Parse(_jwt, func(token *jwt.Token) (interface{}, error) {
+func azureKeyFunc (token *jwt.Token) (interface{}, error) {
 		/*
 			// retrieve from https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration
 			// and https://login.microsoftonline.com/common/discovery/v2.0/keys
@@ -150,7 +151,11 @@ func riderFromJwt(_jwt string) (*model.Rider, error) {
 			return verifyKey, nil
 		*/
 		return nil, nil // obviously not acceptable
-	})
+}
+
+// riderFromJwt takes info from an id_token to create a rider with defaults
+func riderFromJwt(_jwt string) (*model.Rider, error) {
+	idToken, err := jwt.Parse(_jwt, azureKeyFunc)
 	if err != nil {
 		log.Printf("ridersFromJwt: could not parse id_token %#v\n", err.Error())
 		if err.Error() == "key is of invalid type" {
@@ -160,16 +165,18 @@ func riderFromJwt(_jwt string) (*model.Rider, error) {
 		}
 	}
 	log.Printf("riderFromJwt: parsed id_token: %#v\n", idToken)
+
+  // jwt.MapClaims parses claims to a map[string]interface{}
 	claims, ok := idToken.Claims.(jwt.MapClaims)
-	if ok == false {
-		return nil, errors.New("could not find profile claims in id_token\n")
+  if ok == false {
+		return nil, errors.New("failed to parse claims in id_token\n")
 	}
 	rider := &model.Rider{
 		ID:          uuid.Must(uuid.NewV4()),
 		Username:    claims["email"].(string),
 		DisplayName: claims["name"].(string),
 		// defaults: now, in
-		Date:      parseDate(time.Now()),
+		Date:      util.ParseDate(time.Now()),
 		Direction: model.TravelDirectionInbound,
 	}
 	log.Printf("riderFromJwt: created rider %#v\n", rider)

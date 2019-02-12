@@ -1,4 +1,4 @@
-package main
+package handlers
 
 import (
 	"encoding/json"
@@ -8,10 +8,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/joshgav/vanpool-manager/model"
+	"github.com/joshgav/vanpool-manager/pkg/model"
 )
 
-func ridersGetHandler(w http.ResponseWriter, r *http.Request) {
+func RidersGetHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("ridersGetHandler: hello\n")
 
 	date := r.FormValue("date")
@@ -47,7 +47,7 @@ func ridersGetHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func ridersPutHandler(w http.ResponseWriter, r *http.Request) {
+func RidersPutHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("ridersPutHandler: hello")
 	_json, err := ioutil.ReadAll(r.Body)
 	log.Printf("ridersPutHandler: body: %s\n", _json)
@@ -74,7 +74,7 @@ func ridersPutHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func ridersDeleteHandler(w http.ResponseWriter, r *http.Request) {
+func RidersDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("ridersDeleteHandler: hello")
 	_json, err := ioutil.ReadAll(r.Body)
 	if err != nil {

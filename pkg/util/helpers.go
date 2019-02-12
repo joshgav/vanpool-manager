@@ -1,4 +1,4 @@
-package main
+package util
 
 import (
 	"fmt"
@@ -14,6 +14,6 @@ func GetenvOrDefault(key, _default string) string {
 	return value
 }
 
-func parseDate(date time.Time) string {
+func ParseDate(date time.Time) string {
 	return fmt.Sprintf("%d-%02d-%02d", date.Year(), date.Month(), date.Day())
 }
