@@ -1,0 +1,10 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: servicecatalog.k8s.io:service-catalog-readiness
+rules:
+- nonResourceURLs:
+  - /healthz/ready
+  - /healthz
+  verbs:
+  - get

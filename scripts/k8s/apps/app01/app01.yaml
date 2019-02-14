@@ -1,0 +1,35 @@
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: app01
+spec:
+  selector:
+    matchLabels:
+      app: app01
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: app01
+    spec:
+      containers:
+        - name: node-scratch
+          image: joshgavdapps.azurecr.io/node-scratch:latest
+          env:
+            - name: APPINSIGHTS_INSTRUMENTATIONKEY
+              value: 1936c9a2-0953-4443-bd3b-a6317a35e6bd
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app01-service
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 8080
+  selector:
+    app: app01
